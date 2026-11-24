@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maths Worksheet Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: friendly classroom tool, calm and clear
+   IDEA: a real A4 worksheet on a desk, settings beside it
+   PICTURE: the live sheet itself, 4 quadrants
+   COLOUR and TYPE: chalkboard green panel, white paper, one yellow accent; Andika (made for early readers)
+   LAYOUT: controls left, paper right; stacks under 900px */
+:root{color-scheme:light dark;--bg:light-dark(#e9eef0,#151b1e);--panel:light-dark(#1f4a3c,#183a30);--pink:#ffd23f;--ink:#14201b;--muted:light-dark(#5b6b66,#9fb0aa)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);font:16px/1.5 Andika,"Comic Sans MS",system-ui,sans-serif;color:light-dark(#14201b,#e6ece9);overflow-x:clip}
+.wrap{display:grid;grid-template-columns:320px minmax(0,1fr);gap:28px;padding:24px max(3vw,16px);max-width:1240px;margin:auto;align-items:start}
+.ctrl{background:var(--panel);color:#f2f6f4;border-radius:14px;padding:22px;position:sticky;top:16px}
+.lang{display:flex;gap:6px;margin-bottom:14px}.lang button{flex:1;min-height:44px;background:transparent;color:#f2f6f4;border:1.5px solid #ffffff55;font-weight:400}.lang button[aria-pressed=true]{background:var(--pink);color:#14201b;border-color:var(--pink);font-weight:700}
+.ctrl h1{font-size:26px;line-height:1.1;margin:0 0 16px;text-wrap:balance}
+fieldset{border:0;padding:0;margin:0 0 18px}
+legend{font-weight:700;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border:1.5px solid #ffffff55;border-radius:10px;cursor:pointer}
+.chips input{width:18px;height:18px;accent-color:var(--pink)}
+.chips label:has(input:checked){border-color:var(--pink);background:#ffffff14}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+input[type=number],select{font:inherit;font-size:16px;width:90px;min-height:44px;padding:6px 10px;border-radius:10px;border:0;background:#fff;color:#14201b}
+select{width:100%}
+input[type=range]{flex:1;accent-color:var(--pink)}
+.hint{font-size:13px;color:#cfe0d9;margin:6px 0 0}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+button{font:inherit;font-weight:700;min-height:48px;border-radius:12px;border:0;cursor:pointer}
+.go{background:var(--pink);color:#14201b}.pr{background:#fff;color:#14201b}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:3px solid var(--pink);outline-offset:2px}
+#msg{font-size:13px;color:#ffe9a0;min-height:1em;margin:8px 0 0}
+.credit{text-align:center;margin:18px 0 0;padding-top:12px;border-top:1px solid #ffffff33;font-size:13px;color:#cfe0d9}
+.credit a{position:relative;display:inline-block;color:#f2f6f4;text-underline-offset:3px}
+.credit a::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);z-index:10;box-sizing:content-box;width:60px;height:60px;padding:10px;border-radius:10px;background:#000 url("https://nedatech.net/assets/images/srm_white.png") center/contain no-repeat content-box border-box;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+.credit a:hover::after,.credit a:focus-visible::after{opacity:1;visibility:visible}
+.paperwrap{display:grid;gap:24px;justify-items:center}
+.page{width:210mm;max-width:100%;aspect-ratio:210/297;background:#fff;color:var(--ink);box-shadow:0 10px 30px #0003;padding:9mm;display:flex;flex-direction:column}
+.head{display:flex;gap:16px;flex-wrap:wrap;font-size:15px;margin-bottom:5mm}
+.head span{flex:1;border-bottom:1.5px solid #333;padding-bottom:2px;white-space:nowrap}
+.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;border:2px solid #222;border-radius:6px}
+.q{padding:4mm 5mm;display:flex;flex-direction:column;justify-content:space-around}
+.q:nth-child(odd){border-right:2px dashed #888}.q:nth-child(-n+2){border-bottom:2px dashed #888}
+.q h2{font-size:15px;margin:0 0 1mm;color:#1f4a3c}
+.eq{font-size:clamp(13px,2.6vw,21px);white-space:nowrap;display:flex;align-items:center;gap:.35em;font-variant-numeric:tabular-nums}
+.eq b{display:inline-block;width:1.9em;text-align:center;font-weight:400}
+.box{display:inline-block;width:2.1em;height:1.35em;border:2px solid #555;border-radius:5px;vertical-align:middle}
+.ans .box{border-color:#1f4a3c;background:#eef6f2;color:#1f4a3c;font-weight:700;text-align:center;line-height:1.2}
+.page.ans h3{margin:0 0 4mm;font-size:18px}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}.ctrl{position:static}}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  body{background:#fff}
+  .ctrl{display:none}.wrap{display:block;padding:0;max-width:none}.paperwrap{display:block}
+  .page{width:210mm;height:297mm;max-width:none;box-shadow:none;page-break-after:always;break-after:page}
+  .page:last-child{page-break-after:auto;break-after:auto}
+  .eq{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <form class="ctrl" id="f">
+    <div class="lang" role="group" aria-label="Language"><button type="button" data-lang="en">English</button><button type="button" data-lang="el">Ελληνικά</button></div>
+    <h1 data-t="title">Maths worksheet generator</h1>
+    <fieldset>
+      <legend data-t="ops">Operations</legend>
+      <div class="chips">
+        <label><input type="checkbox" name="op" value="+" checked> + <span data-t="add">Add</span></label>
+        <label><input type="checkbox" name="op" value="-"> − <span data-t="sub">Subtract</span></label>
+        <label><input type="checkbox" name="op" value="x"> × <span data-t="mul">Multiply</span></label>
+        <label><input type="checkbox" name="op" value="/"> ÷ <span data-t="div">Divide</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend data-t="max">Highest number</legend>
+      <div class="row"><input type="range" id="maxR" min="3" max="100" value="10"><input type="number" id="max" min="3" max="1000" value="10"></div>
+      <p class="hint" data-t="hint">No number on the sheet (including answers) goes above this.</p>
+    </fieldset>
+    <fieldset>
+      <legend data-t="gap">Where the gap goes</legend>
+      <div class="chips">
+        <label><input type="checkbox" name="gap" value="0" checked> □ + 2 = 5</label>
+        <label><input type="checkbox" name="gap" value="1" checked> 3 + □ = 5</label>
+        <label><input type="checkbox" name="gap" value="2" checked> 3 + 2 = □</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend data-t="groups">Groups</legend>
+      <select id="mode">
+        <option value="mix" data-t="mix">Mix the chosen operations in every group</option>
+        <option value="each" data-t="each">One operation per group (rotating)</option>
+      </select>
+    </fieldset>
+    <fieldset>
+      <div class="chips">
+        <label><input type="checkbox" id="zero" checked> <span data-t="zero">Allow 0</span></label>
+        <label><input type="checkbox" id="key"> <span data-t="key">Answer key page</span></label>
+      </div>
+    </fieldset>
+    <div class="btns">
+      <button type="button" class="go" id="gen" data-t="gen">New sheet</button>
+      <button type="button" class="pr" id="print" data-t="print">Print</button>
+    </div>
+    <p id="msg"></p>
+    <p class="credit"><a href="https://srm.gr" target="_blank" rel="noopener"><span data-t="made">Made by</span> srm.gr</a></p>
+  </form>
+  <div class="paperwrap" id="out"></div>
+</div>
+<script>
+{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const SYM={'+':'+','-':'−','x':'×','/':'÷'};
+const T={
+ en:{title:'Maths worksheet generator',ops:'Operations',add:'Add',sub:'Subtract',mul:'Multiply',div:'Divide',max:'Highest number',hint:'No number on the sheet (including answers) goes above this.',gap:'Where the gap goes',groups:'Groups',mix:'Mix the chosen operations in every group',each:'One operation per group (rotating)',zero:'Allow 0',key:'Answer key page',gen:'New sheet',print:'Print',made:'Made by',
+  name:'Name:',date:'Date:',answers:'Answers',group:'Group',letters:'ABCD',need:'Pick at least one operation and one gap position.',noprint:'If no print dialog opened, print the page using your browser (Ctrl/Cmd + P).',
+  names:{'+':'Addition','-':'Subtraction','x':'Multiplication','/':'Division'}},
+ el:{title:'Φύλλο ασκήσεων μαθηματικών',ops:'Πράξεις',add:'Πρόσθεση',sub:'Αφαίρεση',mul:'Πολλαπλασιασμός',div:'Διαίρεση',max:'Μεγαλύτερος αριθμός',hint:'Κανένας αριθμός στο φύλλο (ούτε τα αποτελέσματα) δεν ξεπερνά αυτόν.',gap:'Πού μπαίνει το κενό',groups:'Ομάδες',mix:'Ανάμεικτες πράξεις',each:'Μία πράξη ανά ομάδα',zero:'Επιτρέπεται το 0',key:'Σελίδα με τις λύσεις',gen:'Νέο φύλλο',print:'Εκτύπωση',made:'Υλοποίηση',
+  name:'Όνομα:',date:'Ημερομηνία:',answers:'Λύσεις',group:'Ομάδα',letters:'ΑΒΓΔ',need:'Διάλεξε τουλάχιστον μία πράξη και μία θέση για το κενό.',noprint:'Αν δεν άνοιξε το παράθυρο εκτύπωσης, χρησιμοποιήστε την εκτύπωση του browser (Ctrl/Cmd + P).',
+  names:{'+':'Πρόσθεση','-':'Αφαίρεση','x':'Πολλαπλασιασμός','/':'Διαίρεση'}}};
+let lang='el';const t=k=>T[lang][k];
+function applyLang(){document.documentElement.lang=lang;$$('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));$$('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===lang));document.title=t('title');$('#msg').textContent='';if(groups.length)render()}
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+function make(op,max,lo){
+  let a,b,c;
+  if(op==='+'){c=ri(Math.max(lo*2,lo),max);a=ri(lo,c-lo);b=c-a}
+  else if(op==='-'){a=ri(lo*2,max);b=ri(lo,a-lo);c=a-b}
+  else if(op==='x'){const l=Math.max(lo,1);a=ri(l,Math.max(l,Math.floor(max/l)));b=ri(l,Math.max(l,Math.floor(max/a)));if(a*b>max)return null;c=a*b}
+  else{const l=Math.max(lo,1);b=ri(Math.max(l,1),Math.max(1,Math.floor(max/Math.max(l,1))));c=ri(l,Math.max(l,Math.floor(max/b)));a=b*c;if(a>max)return null}
+  return [a,b,c];
+}
+function group(ops,max,lo,gaps){
+  const out=[],seen=new Set();let tries=0;
+  while(out.length<10&&tries<4000){
+    tries++;const op=pick(ops),n=make(op,max,lo);if(!n)continue;
+    const k=op+n.join(',');if(seen.has(k)&&tries<2000)continue;seen.add(k);
+    out.push({op,n,gap:+pick(gaps)});
+  }
+  return out;
+}
+const cell=(v,isGap,show)=>isGap?`<span class="box">${show?v:''}</span>`:`<b>${v}</b>`;
+const eq=(p,show)=>`<div class="eq">${cell(p.n[0],p.gap===0,show)}<b>${SYM[p.op]}</b>${cell(p.n[1],p.gap===1,show)}<b>=</b>${cell(p.n[2],p.gap===2,show)}</div>`;
+
+let groups=[];
+function generate(){
+  const ops=$$('[name=op]:checked').map(i=>i.value);
+  const gaps=$$('[name=gap]:checked').map(i=>i.value);
+  const max=Math.max(3,Math.min(1000,+$('#max').value||10));
+  const lo=$('#zero').checked?0:1;
+  if(!ops.length||!gaps.length){$('#msg').textContent=t('need');return}
+  $('#msg').textContent='';
+  const each=$('#mode').value==='each';
+  groups=[0,1,2,3].map(i=>{const o=each?[ops[i%ops.length]]:ops;return{op:each?o[0]:null,i,items:group(o,max,lo,gaps)}});
+  render();
+}
+function render(){
+  const page=show=>`<div class="page${show?' ans':''}">
+    ${show?`<h3>${t('answers')}</h3>`:`<div class="head"><span>${t('name')}</span><span>${t('date')}</span></div>`}
+    <div class="grid">${groups.map(g=>`<section class="q"><h2>${g.op?t('names')[g.op]:t('group')+' '+t('letters')[g.i]}</h2>${g.items.map(p=>eq(p,show)).join('')}</section>`).join('')}</div></div>`;
+  $('#out').innerHTML=page(false)+($('#key').checked?page(true):'');
+}
+function save(){try{localStorage.setItem('mw2',JSON.stringify({ops:$$('[name=op]').map(i=>i.checked),gaps:$$('[name=gap]').map(i=>i.checked),max:$('#max').value,mode:$('#mode').value,zero:$('#zero').checked,key:$('#key').checked,lang}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem('mw2'));if(!s)return;$$('[name=op]').forEach((i,k)=>i.checked=s.ops[k]);$$('[name=gap]').forEach((i,k)=>i.checked=s.gaps[k]);$('#max').value=s.max;$('#maxR').value=Math.min(100,s.max);$('#mode').value=s.mode;$('#zero').checked=s.zero;$('#key').checked=s.key;if(T[s.lang])lang=s.lang}catch(e){}}
+
+$('#maxR').addEventListener('input',e=>{$('#max').value=e.target.value;save();generate()});
+$('#max').addEventListener('change',e=>{$('#maxR').value=Math.min(100,e.target.value);save();generate()});
+$('#f').addEventListener('change',e=>{if(e.target.id==='key'){save();render();return}if(e.target.id!=='max'&&e.target.id!=='maxR'){save();generate()}});
+$('#gen').addEventListener('click',generate);
+$('#print').addEventListener('click',()=>{
+  try{window.print()}catch(e){}
+  $('#msg').textContent=t('noprint');
+});
+$$('[data-lang]').forEach(b=>b.addEventListener('click',()=>{lang=b.dataset.lang;save();applyLang()}));
+load();applyLang();generate();
+}
+</script>
+</body>
+</html>
