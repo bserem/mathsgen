@@ -51,6 +51,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within
 .eq{font-size:clamp(13px,2.6vw,21px);white-space:nowrap;display:flex;align-items:center;gap:.35em;font-variant-numeric:tabular-nums}
 .eq b{display:inline-block;width:1.9em;text-align:center;font-weight:400}
 .box{display:inline-block;width:2.1em;height:1.35em;border:2px solid #555;border-radius:5px;vertical-align:middle}
+input.box{font:inherit;color:inherit;padding:0;margin:0;background:transparent;text-align:center;line-height:1;font-weight:700}
+.eq.ok .box{border-color:#2e9e5b;background:#e3f6ea;color:#1b6b3c}
+.eq.bad .box{border-color:#d33c3c;background:#fde6e6;color:#a02424}
 .ans .box{border-color:#1f4a3c;background:#eef6f2;color:#1f4a3c;font-weight:700;text-align:center;line-height:1.2}
 .page.ans h3{margin:0 0 4mm;font-size:18px}
 @media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}.ctrl{position:static}}
@@ -61,6 +64,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within
   .page{width:210mm;height:297mm;max-width:none;box-shadow:none;page-break-after:always;break-after:page}
   .page:last-child{page-break-after:auto;break-after:auto}
   .eq{font-size:21px}
+  .eq.ok .box,.eq.bad .box{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  input.box{outline:none!important}
 }
 </style>
 </head>
@@ -146,8 +151,8 @@ function group(ops,max,lo,gaps){
   }
   return out;
 }
-const cell=(v,isGap,show)=>isGap?`<span class="box">${show?v:''}</span>`:`<b>${v}</b>`;
-const eq=(p,show)=>`<div class="eq">${cell(p.n[0],p.gap===0,show)}<b>${SYM[p.op]}</b>${cell(p.n[1],p.gap===1,show)}<b>=</b>${cell(p.n[2],p.gap===2,show)}</div>`;
+const cell=(v,isGap,show,id,p)=>!isGap?`<b>${v}</b>`:show?`<span class="box">${v}</span>`:`<input class="box" data-id="${id}" inputmode="numeric" autocomplete="off" maxlength="4" value="${p.val||''}">`;
+const eq=(p,show,id)=>`<div class="eq${!show&&p.state?' '+p.state:''}">${[0,1,2].map(k=>cell(p.n[k],p.gap===k,show,id,p)).reduce((a,c,k)=>a+(k?`<b>${k===1?SYM[p.op]:'='}</b>`:'')+c,'')}</div>`;
 
 let groups=[];
 function generate(){
@@ -164,7 +169,7 @@ function generate(){
 function render(){
   const page=show=>`<div class="page${show?' ans':''}">
     ${show?`<h3>${t('answers')}</h3>`:`<div class="head"><span>${t('name')}</span><span>${t('date')}</span></div>`}
-    <div class="grid">${groups.map(g=>`<section class="q"><h2>${g.op?t('names')[g.op]:t('group')+' '+t('letters')[g.i]}</h2>${g.items.map(p=>eq(p,show)).join('')}</section>`).join('')}</div></div>`;
+    <div class="grid">${groups.map(g=>`<section class="q"><h2>${g.op?t('names')[g.op]:t('group')+' '+t('letters')[g.i]}</h2>${g.items.map((p,k)=>eq(p,show,g.i+'-'+k)).join('')}</section>`).join('')}</div></div>`;
   $('#out').innerHTML=page(false)+($('#key').checked?page(true):'');
 }
 function save(){try{localStorage.setItem('mw2',JSON.stringify({ops:$$('[name=op]').map(i=>i.checked),gaps:$$('[name=gap]').map(i=>i.checked),max:$('#max').value,mode:$('#mode').value,zero:$('#zero').checked,key:$('#key').checked,lang}))}catch(e){}}
@@ -174,6 +179,12 @@ $('#maxR').addEventListener('input',e=>{$('#max').value=e.target.value;save();ge
 $('#max').addEventListener('change',e=>{$('#maxR').value=Math.min(100,e.target.value);save();generate()});
 $('#f').addEventListener('change',e=>{if(e.target.id==='key'){save();render();return}if(e.target.id!=='max'&&e.target.id!=='maxR'){save();generate()}});
 $('#gen').addEventListener('click',generate);
+const itemOf=el=>{const[g,k]=el.dataset.id.split('-');return groups[g].items[k]};
+const out=$('#out');
+out.addEventListener('input',e=>{const el=e.target;if(!el.dataset.id)return;el.value=el.value.replace(/\D/g,'');const p=itemOf(el);p.val=el.value;p.state='';el.closest('.eq').classList.remove('ok','bad')});
+out.addEventListener('focusout',e=>{const el=e.target;if(!el.dataset.id)return;const row=el.closest('.eq');if(row.contains(e.relatedTarget))return;
+  const p=itemOf(el);p.state=el.value===''?'':(+el.value===p.n[p.gap]?'ok':'bad');row.classList.remove('ok','bad');if(p.state)row.classList.add(p.state)});
+out.addEventListener('keydown',e=>{if(e.key!=='Enter'||!e.target.dataset.id)return;e.preventDefault();const all=$$('input.box');const n=all[all.indexOf(e.target)+1];n?n.focus():e.target.blur()});
 $('#print').addEventListener('click',()=>{
   try{window.print()}catch(e){}
   $('#msg').textContent=t('noprint');
